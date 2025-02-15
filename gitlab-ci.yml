@@ -1,0 +1,13 @@
+stages:
+  - analyze
+  - test
+
+sonarcloud_analysis:
+  stage: analyze
+  script:
+    - sonar-scanner
+  only:
+    - main
+  artifacts:
+    paths:
+      - sonar-report.json
