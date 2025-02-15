@@ -2,12 +2,89 @@ stages:
   - analyze
   - test
 
+# Job para SonarCloud
 sonarcloud_analysis:
   stage: analyze
   script:
-    - sonar-scanner
+    - 'export SONAR_TOKEN=$SONAR_TOKEN'
+    - 'sonar-scanner'
+    - 'if grep -q "critical" sonar-report.json; then exit 1; fi'
   only:
     - main
   artifacts:
     paths:
       - sonar-report.json
+  when: always
+
+# Job para Dependency Check
+dependency_check:
+  stage: analyze
+  script:
+    - 'dependency-check --project $CI_PROJECT_NAME --out ./dependency-check-report --scan .'
+  only:
+    - main
+  artifacts:
+    paths:
+      - dependency-check-report/*
+  when: always
+
+# Job para Detección de Secretos
+secrets_detection:
+  stage: analyze
+  template: Security/SecretDetection.gitlab-ci.yml
+  only:
+    - main
+  artifacts:
+    paths:
+      - secret-detection-report/*
+  when: always
+
+# Job para Software Composition Analysis (SCA)
+sca:
+  stage: analyze
+  template: Security/SCA.gitlab-ci.yml
+  only:
+    - main
+  artifacts:
+    paths:
+      - sca-report/*
+  when: always
+
+# Job para DAST Automático Autenticado
+dast_authenticated:
+  stage: test
+  script:
+    - 'export DAST_URL=http://my-app-url'
+    - 'export DAST_USER=username'
+    - 'export DAST_PASSWORD=password'
+    - 'dast --url $DAST_URL --username $DAST_USER --password $DAST_PASSWORD'
+  only:
+    - main
+  artifacts:
+    paths:
+      - dast-report/*
+  when: always
+
+# Job para SAST (Static Application Security Testing)
+sast:
+  stage: analyze
+  template: Security/SAST.gitlab-ci.yml
+  only:
+    - main
+  artifacts:
+    paths:
+      - sast-report/*
+  when: always
+
+# Job para Snyk (Bonus)
+snyk:
+  stage: analyze
+  script:
+    - 'export SNYK_TOKEN=$SNYK_TOKEN'
+    - 'snyk test --all-projects --json > snyk-report.json'
+  only:
+    - main
+  artifacts:
+    paths:
+      - snyk-report.json
+  when: always
